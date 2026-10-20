@@ -124,12 +124,12 @@ input[type=range]:hover::-webkit-slider-thumb{opacity:1}
 </aside>
 <main id="main"></main>
 <footer>
-  <div class="np"><div class="art" id="npArt"></div><div><b id="npT">Nothing playing</b><small id="npA">Pick a song to start</small></div><button class="heart" id="npH" aria-label="Like" style="font-size:18px;color:var(--sub)">♡</button><button id="mpp" aria-label="Play">▶</button></div>
+  <div class="np"><div class="art" id="npArt"></div><div><b id="npT">Nothing playing</b><small id="npA">Pick a song to start</small></div><button class="heart" id="npH" aria-label="Like" style="font-size:18px;color:var(--sub)">♡</button><button id="mpp" aria-label="Play"><svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></button></div>
   <div class="ctl">
     <div class="btns">
       <button id="shuf" aria-label="Shuffle">⤮</button>
       <button id="prev" aria-label="Previous">⏮</button>
-      <button class="pp" id="pp" aria-label="Play">▶</button>
+      <button class="pp" id="pp" aria-label="Play"><svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></button>
       <button id="next" aria-label="Next">⏭</button>
       <button id="rep" aria-label="Repeat">⟳</button>
     </div>
@@ -155,7 +155,7 @@ const songs=[],pls=[],artists=[],HUES=[0]; // no built-in music: everything come
 const $=s=>document.querySelector(s),au=$("#au");
 let S={q:[],i:-1,shuf:false,rep:0,liked:new Set(JSON.parse(localStorage.getItem("liked")||"[]")),view:"home",arg:null,ctx:null};
 const fmt=t=>isFinite(t)?Math.floor(t/60)+":"+String(Math.floor(t%60)).padStart(2,"0"):"0:00";
-const ic={play:"▶",pause:"⏸"};
+const ic={play:'<svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',pause:'<svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="currentColor" aria-hidden="true"><path d="M6 4.5h4.2v15H6zM13.8 4.5H18v15h-4.2z"/></svg>'};
 function setRange(el){el.style.setProperty("--p",(el.value-el.min)/(el.max-el.min)*100+"%")}
 let tk=0,objU=null,tt;
 function toast(m,ms=3000){const t=$("#toast");t.textContent=m;clearTimeout(tt);tt=setTimeout(()=>t.textContent="",ms)}
@@ -170,8 +170,8 @@ async function load(go){const s=S.q[S.i];if(!s)return;const n=++tk;let src=s.src
 // ---- Media Session: controls in the notification shade, lock screen and quick-settings media card
 const MS="mediaSession" in navigator?navigator.mediaSession:null;
 const ICON=new URL("icon-512.png",location.href).href;
-function msMeta(s){if(!MS||!s)return;const t=s.title||"Unknown",a=s.artist||"Streamline";
- try{const u=cover(s.id),art=[];if(u)art.push({src:u,sizes:"512x512",type:/^data:image\/png/.test(u)?"image/png":"image/jpeg"});art.push({src:ICON,sizes:"512x512",type:"image/png"});
+function msMeta(s){if(!MS||!s)return;const t=s.title||"Unknown",a=s.artist||"MK Music";
+ try{const u=cover(s.id),art=[];if(u)art.push({src:u,sizes:"512x512",type:/^data:image\/png/.test(u)?"image/png":"image/jpeg"});else art.push({src:ICON,sizes:"512x512",type:"image/png"});
   MS.metadata=new MediaMetadata({title:t,artist:a,album:s.album||"Streamline",artwork:art})}
  catch(e){try{MS.metadata=new MediaMetadata({title:t,artist:a})}catch(_){}}}
 function msState(){if(!MS)return;try{MS.playbackState=S.i<0?"none":au.paused?"paused":"playing"}catch(e){}}
@@ -183,7 +183,8 @@ function msUpdate(s){msMeta(s);msState()}
  h("seekbackward",d=>{au.currentTime=Math.max(0,au.currentTime-((d&&d.seekOffset)||10))});
  h("seekforward",d=>{au.currentTime=Math.min(au.duration||1e9,au.currentTime+((d&&d.seekOffset)||10))});
  h("seekto",d=>{if(d.fastSeek&&au.fastSeek)au.fastSeek(d.seekTime);else au.currentTime=d.seekTime;msPos()});
- for(const ev of["playing","pause","seeked","loadedmetadata","durationchange"])au.addEventListener(ev,()=>{msState();msPos()})})();
+ for(const ev of["playing","pause","seeked","loadedmetadata","durationchange"])au.addEventListener(ev,()=>{msState();msPos()});
+ au.addEventListener("loadedmetadata",()=>msMeta(S.q[S.i]))})();
 function reqNotif(){try{if(window.Notification&&Notification.permission=="default"&&matchMedia("(display-mode: standalone)").matches&&!localStorage.getItem("notifAsked")){localStorage.setItem("notifAsked","1");Notification.requestPermission()}}catch(e){}}
 function toggle(){if(S.i<0){play(all(),0);return}au.paused?au.play():au.pause()}
 function nxt(auto){if(!S.q.length)return;if(auto&&S.rep==2){au.currentTime=0;au.play();return}
@@ -192,7 +193,7 @@ function nxt(auto){if(!S.q.length)return;if(auto&&S.rep==2){au.currentTime=0;au.
 function prv(f){if(!S.q.length)return;if(!f&&au.currentTime>3){au.currentTime=0;return}S.i=(S.i-1+S.q.length)%S.q.length;load(true)}
 function like(id){S.liked.has(id)?S.liked.delete(id):S.liked.add(id);localStorage.setItem("liked",JSON.stringify([...S.liked]));heartUI();S.view=="liked"?render(1):paint()}
 function heartUI(){const s=S.q[S.i];if(!s)return;const l=S.liked.has(s.id);for(const h of[$("#npH"),$("#ovH")]){h.textContent=l?"♥":"♡";h.style.color=l?"var(--acc-t)":"var(--sub)"}}
-au.onplay=au.onpause=()=>{$("#pp").textContent=$("#mpp").textContent=au.paused?ic.play:ic.pause;paint()};
+au.onplay=au.onpause=()=>{$("#pp").innerHTML=$("#mpp").innerHTML=au.paused?ic.play:ic.pause;paint()};
 au.onloadedmetadata=()=>{const s=S.q[S.i];if(s&&!s.dur){s.dur=au.duration;paint()}};
 au.ontimeupdate=()=>{if(au.duration){const k=$("#seek");k.value=au.currentTime/au.duration*100;setRange(k);$("#cur").textContent=fmt(au.currentTime);$("#dur").textContent=fmt(au.duration)}};
 au.onended=()=>{if(SL.eot){slpClear();msState();toast("Sleep timer: stopped at end of track");return}nxt(true)};au.volume=.7;
